@@ -117,9 +117,10 @@ class Exaone4InferenceModel(DSTransformerModelBase):
         q_len = local_n_heads * self.head_size
         kv_len = local_n_heads_kv * self.head_size
 
-        q = hidden_states[:, :q_len].contiguous()
-        k = hidden_states[:, q_len:q_len + kv_len].contiguous()
-        v = hidden_states[:, q_len + kv_len:]
+        # ``contiguous()`` returns an alias (not a copy) for a single-row slice, and the
+        # write-back below would then overlap its own source. ``clone`` always copies.
+        q = hidden_states[:, :q_len].clone(memory_format=torch.contiguous_format)
+        k = hidden_states[:, q_len:q_len + kv_len].clone(memory_format=torch.contiguous_format)
 
         # Reshape to [tokens * n_heads, head_size] for per-head RMSNorm
         q = q.view(-1, self.head_size)
